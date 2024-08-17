@@ -1,7 +1,6 @@
 import React, { useState } from "react";
 import styled from "styled-components";
-import axios from "axios";
-import ReactMarkdown from "react-markdown";
+import Groq from "groq-sdk";
 
 const AppContainer = styled.div`
   background: linear-gradient(to right, #ece9e6, #ffffff);
@@ -69,52 +68,35 @@ const AnswerContainer = styled.div`
   text-align: left;
 `;
 
-const AnswerText = styled(ReactMarkdown)`
-  padding: 1rem;
-  font-size: 1rem;
-`;
-
-const MessageContainer = styled.div`
-  width: 100%;
-  max-width: 600px;
-  margin-top: 1rem;
-  background: #f9fafb;
-  border-radius: 10px;
-  padding: 2rem;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-`;
-
-const Message = styled.div`
-  padding: 1rem;
-  border-bottom: 1px solid #ddd;
-`;
-
 function App() {
   const [question, setQuestion] = useState("");
   const [answer, setAnswer] = useState("");
   const [generatingAnswer, setGeneratingAnswer] = useState(false);
-  const [messages, setMessages] = useState([]);
 
+  const groq = new Groq({
+    apiKey: 'api key',
+    dangerouslyAllowBrowser: true, 
+  });
 
   async function generateAnswer(e) {
     setGeneratingAnswer(true);
     e.preventDefault();
     setAnswer("Loading your answer... \n It might take up to 10 seconds");
     try {
-      const response = await axios({
-        url: `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${
-          import.meta.env.VITE_API_GENERATIVE_LANGUAGE_CLIENT
-        }`,
-        method: "post",
-        data: {
-          contents: [{ parts: [{ text: question }] }],
-        },
+      const chatCompletion = await groq.chat.completions.create({
+        messages: [
+          {
+            role: "user",
+            content: question,
+          },
+        ],
+        model: "llama3-8b-8192",
       });
       const generatedAnswer =
-        response["data"]["candidates"][0]["content"]["parts"][0]["text"];
+        chatCompletion.choices[0]?.message?.content || "No response generated";
       setAnswer(generatedAnswer);
     } catch (error) {
-      console.log(error);
+      console.error(error);
       setAnswer("Sorry - Something went wrong. Please try again!");
     }
 
@@ -136,9 +118,10 @@ function App() {
         </Button>
       </FormContainer>
       <AnswerContainer>
-        <AnswerText>{answer}</AnswerText>
+        <p>{answer}</p>
       </AnswerContainer>
     </AppContainer>
   );
 }
+
 export default App;
